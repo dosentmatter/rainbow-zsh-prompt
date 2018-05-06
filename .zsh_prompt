@@ -1,0 +1,95 @@
+# shellcheck shell=zsh
+
+setopt promptsubst
+
+# no need to prepend to precmd_functions. Seems like all functions called get
+# the same previous exit code.
+# If want to prepend, do:
+# precmd_functions=('__prompt_command' "${precmd_functions[@]}")
+precmd_functions+=('__prompt_command')
+PS1_COLORIZE_COMMAND='__ps1_lolcat'
+PS1_DEBUG_COMMAND='__ps1_debug'
+
+PS1_DEBUG='false'
+
+__prompt_command() {
+  # Save last exit code
+  PS1_exit=$?
+
+  if [[ "$PS1_DEBUG" = 'true' ]]; then
+    if [[ "$PS1" = "$PS1_DEBUG_DISABLED" ]]; then
+      PS1=$PS1_DEBUG_ENABLED
+    fi
+  else
+    if [[ "$PS1" = "$PS1_DEBUG_ENABLED" ]]; then
+      PS1=$PS1_DEBUG_DISABLED
+    fi
+  fi
+}
+
+ps1_set_debug_mode() {
+  if [[ "$PS1_DEBUG" = 'true' ]]; then
+    PS1=$PS1_DEBUG_ENABLED
+  else
+    PS1=$PS1_DEBUG_DISABLED
+  fi
+}
+
+TERM_DEFAULT=$(tput sgr0)
+TERM_RED=$(tput setaf 1)
+TERM_GREEN=$(tput setaf 2)
+TERM_BLUE=$(tput setaf 4)
+
+unset PS1
+PS1_COLORLESS=$(sed 's/[[:space:]]*$//' <<<"${PS1:-\$(print -P '%m:%~ %n%#')}")
+PS1_SPACING=' '
+PS1=''
+
+PS1_HISTORY_NUMBER="\$(print -P '%!)')"
+PS1+='$(eval "$PS1_COLORIZE_COMMAND" <<<"'$PS1_HISTORY_NUMBER'")'
+PS1+=$PS1_SPACING
+
+PS1+='['
+PS1+='$('
+PS1+='if ((PS1_exit == 0)); then '
+PS1+="echo '$TERM_GREEN'; "
+PS1+='else '
+PS1+="echo '$TERM_RED'; fi"
+PS1+=')'
+PS1+='$PS1_exit'
+PS1+=$TERM_DEFAULT
+PS1+=']'
+PS1+=$PS1_SPACING
+
+PS1+='$(eval "$PS1_COLORIZE_COMMAND" <<<"'$PS1_COLORLESS'")'
+PS1+=$PS1_SPACING
+
+PS1_DEBUG_ENABLED='$(eval "$PS1_DEBUG_COMMAND" <<<"'$PS1'")'
+PS1_DEBUG_ENABLED='$(__ps1_escape_percent <<<"'$PS1_DEBUG_ENABLED'")'
+
+PS1='$(__ps1_escape_percent <<<"'$PS1'")'
+PS1_DEBUG_DISABLED=$PS1
+
+__ps1_remove_newline() {
+  tr -d '\n'
+}
+__ps1_lolcat() {
+  lolcat-c -f -h 0.8 | __ps1_remove_newline
+}
+
+__ps1_colorize_debug() {
+  local COLOR_CODE_REGEX='(\^\[\(B)?\^\[\[[[:digit:];]*m'
+  local REGEX=$COLOR_CODE_REGEX
+
+  local COLOR_CODE_REPLACE=$TERM_BLUE'&'$TERM_DEFAULT
+  local REPLACE=$COLOR_CODE_REPLACE
+
+  sed -E "s/$REGEX/$REPLACE/g"
+}
+__ps1_debug() {
+  cat -v | __ps1_colorize_debug
+}
+
+__ps1_escape_percent() {
+  sed 's/%/%&/g'
+}
