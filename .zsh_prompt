@@ -35,10 +35,10 @@ ps1_set_debug_mode() {
   fi
 }
 
-TERM_DEFAULT=$(tput sgr0)
-TERM_RED=$(tput setaf 1)
-TERM_GREEN=$(tput setaf 2)
-TERM_BLUE=$(tput setaf 4)
+TERM_DEFAULT="%{$(tput sgr0)%}"
+TERM_RED="%{$(tput setaf 1)%}"
+TERM_GREEN="%{$(tput setaf 2)%}"
+TERM_BLUE="%{$(tput setaf 4)%}"
 
 unset PS1
 PS1_COLORLESS=$(sed 's/[[:space:]]*$//' <<<"${PS1:-\$(print -P '%m:%~ %n%#')}")
@@ -67,14 +67,14 @@ PS1+=$PS1_SPACING
 PS1_DEBUG_ENABLED='$(eval "$PS1_DEBUG_COMMAND" <<<"'$PS1'")'
 PS1_DEBUG_ENABLED='$(__ps1_escape_percent <<<"'$PS1_DEBUG_ENABLED'")'
 
-PS1='$(__ps1_escape_percent <<<"'$PS1'")'
 PS1_DEBUG_DISABLED=$PS1
 
 __ps1_remove_newline() {
   tr -d '\n'
 }
 __ps1_lolcat() {
-  lolcat-c -f -h 0.8 | __ps1_remove_newline
+  local PLAIN_INPUT=$(cat)
+  echo "%${#PLAIN_INPUT}{$(echo $PLAIN_INPUT | lolcat-c -f -h 0.8 | __ps1_remove_newline | __ps1_escape_percent)%}"
 }
 
 __ps1_colorize_debug() {
